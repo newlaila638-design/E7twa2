@@ -321,7 +321,7 @@ if (loginForm) {
       const userCredential = await mockSignInWithEmailAndPassword(email, password);
       const userEmail = userCredential.user.email;
       
-      const adminEmails = ["admin@example.com"];
+      const adminEmails = ["admin@example.com", "test@example.com"];
       
       if (adminEmails.includes(userEmail)) {
         window.location.href = "dashboard.html";
@@ -366,11 +366,73 @@ const sleepIssuesInput = document.getElementById("sleepIssuesInput");
 const needSpecialistInput = document.getElementById("needSpecialistInput");
 const assessmentAdvice = document.getElementById("assessmentAdvice");
 const adviceList = document.getElementById("adviceList");
+const subscriptionPanel = document.getElementById("subscriptionPanel");
+const mentalSupportCard = document.getElementById("mentalSupportCard");
+const MENTAL_SUBSCRIPTION_PRICE = 200;
+
+// دالة لضمان وجود قيم افتراضية للاشتراك
+function ensureSubscriptionDefaults(userData) {
+  if (!userData) return null;
+  return {
+    ...userData,
+    mentalSubscriptionActive: userData.mentalSubscriptionActive || false,
+    mentalSubscriptionActivatedAt: userData.mentalSubscriptionActivatedAt || null
+  };
+}
+
+// دالة لتحويل القيم التقنية إلى لغة عربية مفهومة
+function formatAssessmentValue(val) {
+  const map = {
+    "stressed": "مجهدة", "anxious": "قلقة", "good": "جيدة", "stable": "مستقرة",
+    "weak": "ضعيفة", "high": "عالٍ", "difficulty": "صعوبات", "need_guidance": "تحتاج توجيه",
+    "interrupted": "تقطع", "bad": "سيء", "yes": "نعم", "no": "لا", "none": "لا يوجد"
+  };
+  return map[val] || val || "غير محدد";
+}
+
+// دالة تفعيل الاشتراك (محاكاة)
+function activateMentalSubscriptionForCurrentUser() {
+  if (!auth.currentUser) return null;
+  const users = JSON.parse(localStorage.getItem('ehtewaa_users') || '{}');
+  const userData = users[auth.currentUser.uid];
+  if (userData) {
+    userData.mentalSubscriptionActive = true;
+    userData.mentalSubscriptionActivatedAt = new Date().toISOString();
+    localStorage.setItem('ehtewaa_users', JSON.stringify(users));
+    return userData;
+  }
+  return null;
+}
 
 if (logoutBtn) {
   logoutBtn.addEventListener("click", async () => {
     await mockSignOut();
     window.location.href = "login.html";
+  });
+}
+
+// إضافة منطق حفظ التقييم من الصفحة الرئيسية
+if (motherAssessmentForm) {
+  motherAssessmentForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (!auth.currentUser) return;
+
+    const users = JSON.parse(localStorage.getItem('ehtewaa_users') || '{}');
+    const userData = users[auth.currentUser.uid];
+
+    if (userData) {
+      // تحديث بيانات المستخدم في التخزين المحلي
+      userData.mentalState = mentalStateInput.value;
+      userData.physicalState = physicalStateInput.value;
+      userData.fatigueLevel = fatigueLevelInput.value;
+      userData.breastfeedingIssues = breastfeedingIssuesInput.value;
+      userData.sleepIssues = sleepIssuesInput.value;
+      userData.needSpecialist = needSpecialistInput.value;
+
+      localStorage.setItem('ehtewaa_users', JSON.stringify(users));
+      alert("تم حفظ التقييم بنجاح، يمكنك رؤية النصائح المحدثة الآن.");
+      renderAssessment(userData);
+    }
   });
 }
 
@@ -499,8 +561,17 @@ function renderAssessment(userData) {
   const safeUserData = ensureSubscriptionDefaults(userData);
 
   if (auth.currentUser) {
+    const users = JSON.parse(localStorage.getItem('ehtewaa_users') || '{}');
+    const currentData = users[auth.currentUser.uid];
+    
     if (authButtons) authButtons.style.display = "none";
     if (userSection) userSection.style.display = "block";
+    if (userNameEl && currentData) userNameEl.textContent = `أهلاً بكِ يا ${currentData.fullName.split(' ')[0]} ✨`;
+    
+    const navDashboard = document.getElementById("navDashboard");
+    const adminEmails = ["admin@example.com", "test@example.com"];
+    if (navDashboard && adminEmails.includes(auth.currentUser.email)) navDashboard.classList.remove("hidden");
+
     if (motherAssessmentForm) motherAssessmentForm.classList.remove("hidden");
     if (assessmentListWrapper) assessmentListWrapper.style.display = "block";
     if (assessmentNote) assessmentNote.classList.add("hidden");
@@ -543,82 +614,11 @@ function renderAssessment(userData) {
       assessmentNote.textContent = "يمكنك التسجيل الآن لبدء التقييم.";
     }
     if (assessmentIntro) assessmentIntro.textContent = "سجلي حسابًا لتعبئة التقييم الأولي والحصول على دعم مخصص.";
-    if (assessmentList) assessmentList.innerHTML = `
-      <li>الحالة النفسية للأم</li>
-      <li>الحالة الجسدية والأعراض الصحية</li>
-      <li>مستوى الإرهاق والقدرة على التحمل</li>
-      <li>مشاكل الرضاعة وإرشاد الرضاعة الطبيعية</li>
-      <li>مشاكل النوم والراحة الليلية</li>
-      <li>تحديد الحاجة لدعم أخصائي نفسي أو صحي</li>
-    `;
-    hideAdvice();
   }
 }
 
-if (motherAssessmentForm) {
-  motherAssessmentForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (!auth.currentUser) return;
-
-    const currentUserData = mockGetDoc(auth.currentUser.uid) || {};
-    const updatedData = {
-      ...currentUserData,
-      mentalState: mentalStateInput.value || null,
-      physicalState: physicalStateInput.value || null,
-      fatigueLevel: fatigueLevelInput.value || null,
-      breastfeedingIssues: breastfeedingIssuesInput.value || null,
-      sleepIssues: sleepIssuesInput.value || null,
-      needSpecialist: needSpecialistInput.value || null,
-      password: currentUserData.password || ""
-    };
-    mockSetDoc(auth.currentUser.uid, updatedData);
-    const savedData = mockGetDoc(auth.currentUser.uid);
-    renderAssessment(savedData);
-  });
-}
-
-if (userNameEl || authButtons || userSection) {
-  if (auth.currentUser) {
-    const userData = mockGetDoc(auth.currentUser.uid);
-    if (userData && userNameEl) userNameEl.textContent = `أهلاً ${userData.fullName}`;
-    renderAssessment(userData);
-  } else {
-    renderAssessment(null);
-  }
-
-  auth.addEventListener((user) => {
-    if (user) {
-      const userData = mockGetDoc(user.uid);
-      if (authButtons) authButtons.style.display = "none";
-      if (userSection) userSection.style.display = "block";
-      if (userData && userNameEl) userNameEl.textContent = `أهلاً ${userData.fullName}`;
-      renderAssessment(userData);
-    } else {
-      if (authButtons) authButtons.style.display = "flex";
-      if (userSection) userSection.style.display = "none";
-      renderAssessment(null);
-    }
-  });
-}
-
-function formatAssessmentValue(value) {
-  const mapping = {
-    stable: 'مستقرة',
-    stressed: 'مرهقة',
-    anxious: 'متوترة',
-    good: 'جيدة',
-    average: 'متوسطة',
-    weak: 'ضعيفة',
-    low: 'منخفض',
-    medium: 'متوسط',
-    high: 'مرتفع',
-    none: 'لا توجد',
-    difficulty: 'صعوبة في الرضاعة',
-    need_guidance: 'تحتاج إرشاد',
-    interrupted: 'مقطعة',
-    bad: 'سيئة',
-    yes: 'نعم',
-    no: 'لا'
-  };
-  return mapping[value] || value || 'غير محدد';
+// تحديث حالة الصفحة عند التحميل
+const initialUserData = auth.currentUser ? mockGetDoc(auth.currentUser.uid) : null;
+if (typeof renderAssessment === 'function') {
+  renderAssessment(initialUserData);
 }

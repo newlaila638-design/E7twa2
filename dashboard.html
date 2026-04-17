@@ -29,7 +29,7 @@
 
     header {
       background: white;
-      padding: 20px 30px;
+      padding: 15px 20px;
       border-radius: 15px;
       margin-bottom: 30px;
       box-shadow: 0 5px 15px rgba(0,0,0,0.1);
@@ -251,17 +251,8 @@
   <div class="container">
     <header>
       <h1>🎯 لوحة التحكم - احتواء</h1>
-      <div class="user-info">
-        <a href="index.html" class="logout-btn" style="margin-right: 10px;">الرئيسية</a>
-        <a href="services.html" class="logout-btn" style="margin-right: 10px;">الخدمات</a>
-        <a href="about.html" class="logout-btn" style="margin-right: 10px;">من نحن</a>
-        <a href="physical-wellness.html" class="logout-btn" style="margin-right: 10px;">الصحة الجسدية</a>
-        <a href="mental-support.html" class="logout-btn" style="margin-right: 10px;">الدعم النفسي</a>
-        <a href="breastfeeding-nutrition.html" class="logout-btn" style="margin-right: 10px;">الرضاعة والتغذية</a>
-        <a href="baby-care.html" class="logout-btn" style="margin-right: 10px;">ورش رعاية الطفل</a>
-        <a href="self-care.html" class="logout-btn" style="margin-right: 10px;">العناية الشخصية</a>
-        <a href="community.html" class="logout-btn" style="margin-right: 10px;">مجتمع الأمهات</a>
-        <a href="online-services.html" class="logout-btn" style="margin-right: 10px;">خدمات أونلاين</a>
+      <div class="user-info" style="flex-wrap: wrap; justify-content: center;">
+        <a href="index.html" class="logout-btn">الرئيسية</a>
         <span class="user-name" id="adminName">مشرف النظام</span>
         <button class="logout-btn" id="logoutBtn">تسجيل الخروج</button>
       </div>
@@ -353,7 +344,11 @@
     const activityList = document.getElementById("activityList");
     const usersTableBody = document.getElementById("usersTableBody");
 
-    // tحقق من الدخول
+    // استعادة الجلسة للمحاكاة
+    const savedUser = localStorage.getItem('ehtewaa_currentUser');
+    if (savedUser) auth.currentUser = JSON.parse(savedUser);
+
+    // تحقق من الدخول
     if (!auth.currentUser) {
       window.location.href = "login.html";
     } else {
